@@ -1,2 +1,6 @@
 # SIGMA_project
-SIGMA is a python based security monitoring tool designed specifically for junior security operation center analyst (SOC) and security individual practitioners who what to understand  
+SIGMA is a python based security monitoring tool designed specifically for junior security operation center analyst (SOC) and security individual practitioners who what to understand:
+1. how can windows event logs be  prgrammatically collected, persed and structured to enable efficient security analysis and correlation.
+2. what detection rules are most effective for indentifying common attack vectors, including brute force attempts, suspicious process execution and potential vackdoor communicaions, using only locally available windows event data.
+3. how can external threat intelligence APIs, specifically VirusTotal and abuse IP data base be intergrated to automatically enrich detectors of compromise without introducing significant performance overhead or exeeding free tier limitation
+4. what web interface features and visualizations most effectively support security monitoring tasks for junior analysts, including real-time alert display, historical log searching and natural language query capabilties
