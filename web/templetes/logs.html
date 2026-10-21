@@ -1,0 +1,750 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Logs Page Specific Styles */
+    .log-card {
+        transition: all 0.2s ease;
+        border-left: 3px solid;
+        margin-bottom: 10px;
+    }
+    
+    .log-card:hover {
+        transform: translateX(5px);
+        background-color: rgba(52, 152, 219, 0.05);
+    }
+    
+    .event-high { border-left-color: #e74c3c; }
+    .event-warning { border-left-color: #f39c12; }
+    .event-info { border-left-color: #3498db; }
+    .event-normal { border-left-color: #95a5a6; }
+    
+    .event-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    
+    .event-badge-high { background-color: #e74c3c; color: white; }
+    .event-badge-warning { background-color: #f39c12; color: white; }
+    .event-badge-info { background-color: #3498db; color: white; }
+    .event-badge-normal { background-color: #95a5a6; color: white; }
+    
+    .log-table {
+        font-size: 0.85rem;
+    }
+    
+    .log-table th {
+        background-color: #2c3e50;
+        color: white;
+        position: sticky;
+        top: 0;
+        padding: 10px;
+        font-weight: 600;
+    }
+    
+    .log-table td {
+        padding: 8px;
+        vertical-align: middle;
+        border-bottom: 1px solid #ecf0f1;
+    }
+    
+    .log-row {
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .log-row:hover {
+        background-color: rgba(52, 152, 219, 0.1);
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, #2c3e50 0%, #1a2b3c 100%);
+        border-radius: 10px;
+        padding: 12px;
+        text-align: center;
+        color: white;
+        transition: transform 0.2s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-3px);
+    }
+    
+    .stats-number {
+        font-size: 1.8rem;
+        font-weight: bold;
+    }
+    
+    .stats-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.8;
+    }
+    
+    .quick-filter-btn {
+        transition: all 0.2s ease;
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-size: 0.8rem;
+    }
+    
+    .quick-filter-btn.active {
+        background-color: #3498db;
+        color: white;
+        border-color: #3498db;
+    }
+    
+    .refresh-btn {
+        transition: all 0.2s ease;
+    }
+    
+    .refresh-btn:hover {
+        transform: rotate(180deg);
+    }
+    
+    .loading-spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 0.6s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+</style>
+
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-3"><i class="fas fa-file-alt me-2"></i> Windows Event Logs</h2>
+        <hr>
+    </div>
+</div>
+
+<!-- Statistics Cards - Always Show Totals -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stats-card" id="total-card">
+            <div class="stats-number" id="total-logs">0</div>
+            <div class="stats-label">Total Events</div>
+            <div class="small text-muted mt-1" id="total-time-range">Last 24h</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);" id="security-card">
+            <div class="stats-number" id="security-logs">0</div>
+            <div class="stats-label">Security Logs</div>
+            <div class="small text-muted mt-1" id="security-time-range">Last 24h</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);" id="system-card">
+            <div class="stats-number" id="system-logs">0</div>
+            <div class="stats-label">System Logs</div>
+            <div class="small text-muted mt-1" id="system-time-range">Last 24h</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);" id="app-card">
+            <div class="stats-number" id="app-logs">0</div>
+            <div class="stats-label">Application Logs</div>
+            <div class="small text-muted mt-1" id="app-time-range">Last 24h</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters Section -->
+<div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+        <i class="fas fa-filter me-2"></i> Filters
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Log Type</label>
+                <select id="log-type" class="form-select">
+                    <option value="all">All Logs</option>
+                    <option value="Security">Security Log</option>
+                    <option value="System">System Log</option>
+                    <option value="Application">Application Log</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold">Time Range</label>
+                <select id="time-range" class="form-select">
+                    <option value="1">Last 1 hour</option>
+                    <option value="6">Last 6 hours</option>
+                    <option value="12">Last 12 hours</option>
+                    <option value="24" selected>Last 24 hours</option>
+                    <option value="48">Last 48 hours</option>
+                    <option value="168">Last 7 days</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold">Event ID</label>
+                <input type="text" id="event-id" class="form-control" placeholder="e.g., 4625">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Search Keyword</label>
+                <input type="text" id="keyword" class="form-control" placeholder="Search in description...">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button onclick="searchLogs()" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-1"></i> Search
+                </button>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-12">
+                <label class="form-label small fw-bold">Quick Filters</label>
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-sm btn-outline-secondary quick-filter-btn" data-event="4625">
+                        <i class="fas fa-times-circle text-danger"></i> Failed Logins (4625)
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary quick-filter-btn" data-event="4624">
+                        <i class="fas fa-check-circle text-success"></i> Successful Logins (4624)
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary quick-filter-btn" data-event="4688">
+                        <i class="fas fa-microchip"></i> Process Creation (4688)
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary quick-filter-btn" data-event="4672">
+                        <i class="fas fa-skull-crosswalk text-danger"></i> Privilege Escalation (4672)
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary quick-filter-btn" data-event="7045">
+                        <i class="fas fa-cog"></i> Service Installation (7045)
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">
+                        <i class="fas fa-eraser"></i> Clear All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Auto-refresh Toggle and Action Buttons -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="auto-refresh" checked>
+                <label class="form-check-label" for="auto-refresh">
+                    <i class="fas fa-sync-alt"></i> Auto-refresh (every 10 seconds)
+                </label>
+                <span class="badge bg-info ms-2" id="log-count">0 events</span>
+            </div>
+            <div class="action-buttons">
+                <button onclick="manualRefresh()" class="btn btn-outline-primary" title="Refresh Now">
+                    <i class="fas fa-sync-alt refresh-btn"></i> Refresh
+                </button>
+                <button onclick="exportLogs()" class="btn btn-outline-secondary">
+                    <i class="fas fa-download me-1"></i> Export CSV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Logs Table -->
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        <i class="fas fa-table me-2"></i> Event Logs
+        <span id="loading-indicator" class="ms-2" style="display: none;">
+            <span class="loading-spinner"></span>
+        </span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
+            <table class="table log-table mb-0">
+                <thead>
+                     
+                        <th style="width: 160px">Timestamp</th>
+                        <th style="width: 80px">Event ID</th>
+                        <th style="width: 180px">Source</th>
+                        <th style="width: 80px">Log Type</th>
+                        <th>Description</th>
+                        <th style="width: 120px">Computer</th>
+                    </thead>
+                <tbody id="logs-tbody">
+                     
+                        <td colspan="6" class="text-center py-5">
+                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                            <p>Loading logs...</p>
+                         
+                     
+                </tbody>
+             
+        </div>
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center p-3 border-top">
+            <div>
+                <span id="logs-info" class="text-muted small">Showing 0 logs</span>
+            </div>
+            <div>
+                <button id="prev-page" class="btn btn-sm btn-outline-secondary" disabled>
+                    <i class="fas fa-chevron-left"></i> Previous
+                </button>
+                <span id="page-info" class="mx-2 small">Page 1</span>
+                <button id="next-page" class="btn btn-sm btn-outline-secondary" disabled>
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Log Detail Modal -->
+<div class="modal fade" id="logModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" id="log-modal-header">
+                <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i> Event Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="log-detail-body">
+                Loading...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentLogs = [];
+let filteredLogs = [];
+let currentPage = 1;
+let itemsPerPage = 50;
+let autoRefreshInterval = null;
+let isLoading = false;
+
+// Store totals for each log type
+let logTotals = {
+    total: 0,
+    security: 0,
+    system: 0,
+    application: 0
+};
+
+// Get event class and badge
+function getEventClass(eventId) {
+    const criticalEvents = [4625, 4672, 4648, 4771];
+    const warningEvents = [4624, 4688, 7045, 7036];
+    
+    if (criticalEvents.includes(eventId)) return { class: 'event-high', badge: 'event-badge-high', icon: 'fa-skull-crosswalk' };
+    if (warningEvents.includes(eventId)) return { class: 'event-warning', badge: 'event-badge-warning', icon: 'fa-exclamation-triangle' };
+    if (eventId >= 1000 && eventId <= 1999) return { class: 'event-info', badge: 'event-badge-info', icon: 'fa-info-circle' };
+    return { class: 'event-normal', badge: 'event-badge-normal', icon: 'fa-file-alt' };
+}
+
+// Format timestamp
+function formatTimestamp(timestamp) {
+    if (!timestamp) return 'N/A';
+    try {
+        const date = new Date(timestamp);
+        return date.toLocaleString();
+    } catch {
+        return timestamp;
+    }
+}
+
+// Get human readable time range text
+function getTimeRangeText(hours) {
+    if (hours === 1) return 'Last hour';
+    if (hours === 6) return 'Last 6 hours';
+    if (hours === 12) return 'Last 12 hours';
+    if (hours === 24) return 'Last 24h';
+    if (hours === 48) return 'Last 48h';
+    if (hours === 168) return 'Last 7 days';
+    return 'Last 24h';
+}
+
+// Update all statistics cards with totals
+function updateAllStats(hours) {
+    const timeRangeText = getTimeRangeText(hours);
+    
+    // Update the time range text on all cards
+    document.getElementById('total-time-range').innerText = timeRangeText;
+    document.getElementById('security-time-range').innerText = timeRangeText;
+    document.getElementById('system-time-range').innerText = timeRangeText;
+    document.getElementById('app-time-range').innerText = timeRangeText;
+    
+    // Update the numbers
+    document.getElementById('total-logs').innerText = logTotals.total;
+    document.getElementById('security-logs').innerText = logTotals.security;
+    document.getElementById('system-logs').innerText = logTotals.system;
+    document.getElementById('app-logs').innerText = logTotals.application;
+}
+
+// Load all log totals (independent of filters) - FIXED for Total Events
+async function loadLogTotals() {
+    const hours = document.getElementById('time-range').value;
+    
+    // Fetch Security logs count
+    try {
+        const securityRes = await fetch(`/api/logs/search?hours=${hours}&type=Security&limit=10000`);
+        const securityData = await securityRes.json();
+        if (securityData.success) {
+            logTotals.security = securityData.data.length;
+        }
+    } catch (e) { console.error("Security fetch error:", e); }
+    
+    // Fetch System logs count
+    try {
+        const systemRes = await fetch(`/api/logs/search?hours=${hours}&type=System&limit=10000`);
+        const systemData = await systemRes.json();
+        if (systemData.success) {
+            logTotals.system = systemData.data.length;
+        }
+    } catch (e) { console.error("System fetch error:", e); }
+    
+    // Fetch Application logs count
+    try {
+        const appRes = await fetch(`/api/logs/search?hours=${hours}&type=Application&limit=10000`);
+        const appData = await appRes.json();
+        if (appData.success) {
+            logTotals.application = appData.data.length;
+        }
+    } catch (e) { console.error("App fetch error:", e); }
+    
+    // Fetch Total (all logs) - FIXED: Don't add type parameter
+    try {
+        const totalRes = await fetch(`/api/logs/search?hours=${hours}&limit=10000`);
+        const totalData = await totalRes.json();
+        if (totalData.success) {
+            logTotals.total = totalData.data.length;
+        }
+    } catch (e) { console.error("Total fetch error:", e); }
+    
+    updateAllStats(hours);
+}
+
+// Manual refresh button
+function manualRefresh() {
+    if (isLoading) return;
+    searchLogs();
+    loadLogTotals();
+    const refreshIcon = document.querySelector('.refresh-btn');
+    refreshIcon.style.transform = 'rotate(180deg)';
+    setTimeout(() => {
+        refreshIcon.style.transform = '';
+    }, 300);
+}
+
+// Load logs with filters
+function searchLogs() {
+    if (isLoading) return;
+    isLoading = true;
+    
+    const loadingIndicator = document.getElementById('loading-indicator');
+    if (loadingIndicator) loadingIndicator.style.display = 'inline-block';
+    
+    const logType = document.getElementById('log-type').value;
+    const hours = document.getElementById('time-range').value;
+    const eventId = document.getElementById('event-id').value;
+    const keyword = document.getElementById('keyword').value;
+    
+    let url = '/api/logs/search?hours=' + hours;
+    
+    if (logType !== 'all') {
+        url += '&type=' + logType;
+    }
+    
+    if (eventId) url += '&event_id=' + eventId;
+    if (keyword) url += '&keyword=' + encodeURIComponent(keyword);
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentLogs = data.data || [];
+                filterAndDisplay();
+            } else {
+                console.error("Error loading logs:", data.error);
+                document.getElementById('logs-tbody').innerHTML = `
+                    <tr><td colspan="6" class="text-center py-5 text-danger">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <p>Error loading logs: ${data.error}</p>
+                    </td></tr>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error("Fetch error:", error);
+            document.getElementById('logs-tbody').innerHTML = `
+                <tr><td colspan="6" class="text-center py-5 text-danger">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                    <p>Failed to connect to server</p>
+                </td></tr>
+            `;
+        })
+        .finally(() => {
+            isLoading = false;
+            if (loadingIndicator) loadingIndicator.style.display = 'none';
+        });
+}
+
+// Filter and display with pagination
+function filterAndDisplay() {
+    let filtered = [...currentLogs];
+    
+    const searchTerm = document.getElementById('keyword').value.toLowerCase();
+    if (searchTerm) {
+        filtered = filtered.filter(log => 
+            (log.description || '').toLowerCase().includes(searchTerm) ||
+            (log.source || '').toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    filteredLogs = filtered;
+    currentPage = 1;
+    displayLogs();
+}
+
+// Display logs with pagination
+function displayLogs() {
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const pageLogs = filteredLogs.slice(start, end);
+    const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
+    
+    document.getElementById('prev-page').disabled = currentPage === 1;
+    document.getElementById('next-page').disabled = currentPage === totalPages || totalPages === 0;
+    document.getElementById('page-info').innerText = `Page ${currentPage} of ${totalPages || 1}`;
+    document.getElementById('logs-info').innerText = `Showing ${filteredLogs.length} logs`;
+    document.getElementById('log-count').innerText = filteredLogs.length + ' events';
+    
+    if (pageLogs.length === 0) {
+        document.getElementById('logs-tbody').innerHTML = `
+            <tr><td colspan="6" class="text-center py-5 text-muted">
+                <i class="fas fa-inbox fa-2x mb-2"></i>
+                <p>No logs found</p>
+            </td></tr>
+        `;
+        return;
+    }
+    
+    let html = '';
+    pageLogs.forEach(log => {
+        const eventClass = getEventClass(log.event_id);
+        const description = (log.description || 'No description');
+        const shortDesc = description.length > 120 ? description.substring(0, 120) + '...' : description;
+        
+        html += `
+            <tr class="log-row" onclick="showLogDetail(${JSON.stringify(log).replace(/"/g, '&quot;')})">
+                <td><small>${formatTimestamp(log.timestamp)}</small></td>
+                <td><span class="event-badge ${eventClass.badge}">${log.event_id || 'N/A'}</span></td>
+                <td><small>${escapeHtml(log.source || 'N/A')}</small></td>
+                <td><span class="badge bg-secondary">${escapeHtml(log.log_type || 'N/A')}</span></td>
+                <td><small>${escapeHtml(shortDesc)}</small></td>
+                <td><small>${escapeHtml(log.computer || 'N/A')}</small></td>
+            </tr>
+        `;
+    });
+    
+    document.getElementById('logs-tbody').innerHTML = html;
+}
+
+// Show log detail modal
+function showLogDetail(log) {
+    const eventClass = getEventClass(log.event_id);
+    const modalHeader = document.getElementById('log-modal-header');
+    modalHeader.className = `modal-header ${eventClass.class.replace('event-', 'bg-')} text-white`;
+    
+    let securityInsight = '';
+    if (log.event_id === 4625) {
+        securityInsight = `
+            <div class="alert alert-danger mt-3">
+                <i class="fas fa-skull-crosswalk me-2"></i>
+                <strong>Security Insight:</strong> This is a failed login attempt. Multiple failures may indicate a brute force attack.
+            </div>
+        `;
+    } else if (log.event_id === 4624) {
+        securityInsight = `
+            <div class="alert alert-success mt-3">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong>Security Insight:</strong> This is a successful login. Monitor for unusual login times or locations.
+            </div>
+        `;
+    } else if (log.event_id === 4688) {
+        securityInsight = `
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-microchip me-2"></i>
+                <strong>Security Insight:</strong> A new process was created. Verify if this process is expected.
+            </div>
+        `;
+    } else if (log.event_id === 4672) {
+        securityInsight = `
+            <div class="alert alert-danger mt-3">
+                <i class="fas fa-skull-crosswalk me-2"></i>
+                <strong>Security Insight:</strong> Privilege escalation detected. Special privileges were assigned.
+            </div>
+        `;
+    }
+    
+    const html = `
+        <div>
+            <h6><i class="fas fa-info-circle me-2"></i> Event Information</h6>
+            <table class="table table-sm">
+                 <tr><th style="width: 120px">Event ID:</th><td><strong>${log.event_id || 'N/A'}</strong></td></tr>
+                 <tr><th>Log Type:</th><td>${escapeHtml(log.log_type || 'N/A')}</td></tr>
+                 <tr><th>Source:</th><td>${escapeHtml(log.source || 'N/A')}</td></tr>
+                 <tr><th>Computer:</th><td>${escapeHtml(log.computer || 'N/A')}</td></tr>
+                 <tr><th>Timestamp:</th><td>${log.timestamp || 'N/A'}</td></tr>
+                 <tr><th>Category:</th><td>${log.category || 'N/A'}</td></tr>
+                 <tr><th>Type:</th><td>${log.type || 'N/A'}</td></tr>
+             </table>
+            
+            <h6><i class="fas fa-align-left me-2"></i> Description</h6>
+            <div class="alert alert-secondary" style="max-height: 300px; overflow-y: auto;">
+                <pre style="white-space: pre-wrap; font-family: monospace; margin: 0;">${escapeHtml(log.description || 'No description available')}</pre>
+            </div>
+            ${securityInsight}
+        </div>
+    `;
+    
+    document.getElementById('log-detail-body').innerHTML = html;
+    new bootstrap.Modal(document.getElementById('logModal')).show();
+}
+
+// Export logs to CSV
+function exportLogs() {
+    if (filteredLogs.length === 0) {
+        alert('No logs to export');
+        return;
+    }
+    
+    const exportData = filteredLogs.map(log => ({
+        timestamp: log.timestamp,
+        event_id: log.event_id,
+        source: log.source,
+        log_type: log.log_type,
+        computer: log.computer,
+        description: log.description
+    }));
+    
+    const headers = Object.keys(exportData[0]);
+    const csvRows = [headers.join(',')];
+    
+    for (const row of exportData) {
+        const values = headers.map(header => {
+            let value = row[header] || '';
+            if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+                value = `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+        });
+        csvRows.push(values.join(','));
+    }
+    
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sigma_logs_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    alert(`Exported ${exportData.length} logs`);
+}
+
+// Clear filters
+function clearFilters() {
+    document.getElementById('event-id').value = '';
+    document.getElementById('keyword').value = '';
+    document.getElementById('log-type').value = 'all';
+    searchLogs();
+}
+
+// Time range change handler - updates totals
+document.getElementById('time-range').addEventListener('change', function() {
+    loadLogTotals();
+    searchLogs();
+});
+
+// Quick filter buttons
+document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const eventId = this.getAttribute('data-event');
+        if (eventId) {
+            document.getElementById('event-id').value = eventId;
+            searchLogs();
+        }
+    });
+});
+
+// Pagination
+document.getElementById('prev-page').addEventListener('click', () => {
+    if (currentPage > 1) {
+        currentPage--;
+        displayLogs();
+    }
+});
+
+document.getElementById('next-page').addEventListener('click', () => {
+    const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
+    if (currentPage < totalPages) {
+        currentPage++;
+        displayLogs();
+    }
+});
+
+// Auto-refresh
+function setupAutoRefresh() {
+    const autoRefreshCheckbox = document.getElementById('auto-refresh');
+    
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+    
+    if (autoRefreshCheckbox.checked) {
+        autoRefreshInterval = setInterval(() => {
+            searchLogs();
+            loadLogTotals();
+        }, 10000);
+    }
+}
+
+// Escape HTML
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Enter key support
+document.getElementById('event-id').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') searchLogs();
+});
+document.getElementById('keyword').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') searchLogs();
+});
+
+// Initial load
+document.addEventListener('DOMContentLoaded', () => {
+    loadLogTotals();
+    searchLogs();
+    setupAutoRefresh();
+    
+    // Also set up auto-refresh checkbox change
+    document.getElementById('auto-refresh').addEventListener('change', setupAutoRefresh);
+});
+</script>
+{% endblock %}

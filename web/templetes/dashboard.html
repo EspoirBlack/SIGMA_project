@@ -1,0 +1,770 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Dashboard Specific Styles */
+    .stat-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+        border: none;
+        border-radius: 12px;
+        overflow: hidden;
+        height: 100%;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    
+    .stat-icon {
+        font-size: 2rem;
+        opacity: 0.8;
+        position: absolute;
+        right: 15px;
+        top: 15px;
+    }
+    
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.9;
+    }
+    
+    .row.g-4 > [class*="col-"] {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .row.g-4 .card {
+        flex: 1;
+    }
+    
+    .cpu-metric-value {
+        font-size: 1.2rem;
+        font-weight: bold;
+        display: block;
+        margin-top: 4px;
+    }
+    
+    .metric-label {
+        font-size: 0.7rem;
+        opacity: 0.8;
+    }
+    
+    .alert-item {
+        transition: all 0.2s ease;
+        border-left: 3px solid;
+    }
+    
+    .alert-item:hover {
+        transform: translateX(5px);
+    }
+    
+    .alert-high { border-left-color: #e74c3c; }
+    .alert-medium { border-left-color: #f39c12; }
+    .alert-low { border-left-color: #3498db; }
+    
+    .progress {
+        height: 5px;
+        border-radius: 3px;
+        background-color: rgba(0,0,0,0.1);
+    }
+    
+    .progress-bar {
+        border-radius: 3px;
+        transition: width 0.5s ease;
+    }
+    
+    .core-bar {
+        height: 80px;
+        background-color: #ecf0f1;
+        border-radius: 6px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+    }
+    
+    .core-fill {
+        transition: height 0.5s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: bold;
+        color: white;
+    }
+    
+    .connection-row, .process-row {
+        transition: all 0.2s ease;
+    }
+    
+    .connection-row:hover, .process-row:hover {
+        background-color: rgba(52, 152, 219, 0.1);
+        cursor: pointer;
+    }
+    
+    .risk-high { color: #e74c3c; }
+    .risk-medium { color: #f39c12; }
+    .risk-low { color: #27ae60; }
+    
+    /* Table Styles - Organized */
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table thead th {
+        background-color: #2c3e50;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 10px 8px;
+        border: none;
+        position: sticky;
+        top: 0;
+    }
+    
+    .table tbody td {
+        font-size: 0.8rem;
+        padding: 8px;
+        vertical-align: middle;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .table tbody tr:hover {
+        background-color: rgba(52, 152, 219, 0.05);
+    }
+    
+    .badge-sm {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+        border-radius: 12px;
+    }
+    
+    .status-badge {
+        font-size: 0.7rem;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+    
+    .status-established { background-color: #27ae60; color: white; }
+    .status-listen { background-color: #3498db; color: white; }
+    .status-timewait { background-color: #95a5a6; color: white; }
+    
+    .quick-action-btn {
+        transition: all 0.2s ease;
+    }
+    
+    .quick-action-btn:hover {
+        transform: translateY(-2px);
+    }
+    
+    /* Section spacing */
+    .section-card {
+        margin-bottom: 20px;
+    }
+    
+    .card-header {
+        padding: 12px 16px;
+    }
+</style>
+
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-3"><i class="fas fa-chart-line me-2"></i> System Dashboard</h2>
+        <hr>
+    </div>
+</div>
+
+<!-- Stats Cards Row -->
+<div class="row g-4 mb-4">
+    <!-- CPU Card -->
+    <div class="col-md-3">
+        <div class="card stat-card bg-primary text-white h-100">
+            <div class="card-body position-relative">
+                <div class="stat-icon"><i class="fas fa-microchip"></i></div>
+                <div class="stat-value" id="cpu-percent">--%</div>
+                <div class="stat-label">CPU USAGE</div>
+                <div class="progress mt-2">
+                    <div id="cpu-progress" class="progress-bar bg-light" style="width: 0%"></div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-4 text-center">
+                        <div class="metric-label"><i class="fas fa-user-circle"></i> User</div>
+                        <span id="cpu-user" class="cpu-metric-value">--%</span>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="metric-label"><i class="fas fa-microchip"></i> System</div>
+                        <span id="cpu-system" class="cpu-metric-value">--%</span>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="metric-label"><i class="fas fa-bed"></i> Idle</div>
+                        <span id="cpu-idle" class="cpu-metric-value">--%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Memory Card -->
+    <div class="col-md-3">
+        <div class="card stat-card bg-success text-white h-100">
+            <div class="card-body position-relative">
+                <div class="stat-icon"><i class="fas fa-memory"></i></div>
+                <div class="stat-value" id="memory-percent">--%</div>
+                <div class="stat-label">MEMORY USAGE</div>
+                <div class="progress mt-2">
+                    <div id="memory-progress" class="progress-bar bg-light" style="width: 0%"></div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-6 text-center">
+                        <div class="metric-label">Used</div>
+                        <span id="memory-used" class="cpu-metric-value">--GB</span>
+                    </div>
+                    <div class="col-6 text-center">
+                        <div class="metric-label">Total</div>
+                        <span id="memory-total" class="cpu-metric-value">--GB</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Uptime Card -->
+    <div class="col-md-3">
+        <div class="card stat-card bg-info text-white h-100">
+            <div class="card-body position-relative">
+                <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                <div class="stat-value" id="uptime-days">--</div>
+                <div class="stat-label">UPTIME (DAYS)</div>
+                <div class="text-center mt-3">
+                    <span id="uptime-hours-minutes" class="cpu-metric-value">--h --m</span>
+                </div>
+                <div class="mt-2 small text-center">
+                    <i class="fas fa-calendar-alt me-1"></i>
+                    <span id="boot-time">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Network Card -->
+    <div class="col-md-3">
+        <div class="card stat-card bg-warning text-dark h-100">
+            <div class="card-body position-relative">
+                <div class="stat-icon"><i class="fas fa-network-wired"></i></div>
+                <div class="stat-value" id="conn-count">--</div>
+                <div class="stat-label">ACTIVE CONNECTIONS</div>
+                <div class="row mt-3">
+                    <div class="col-6 text-center">
+                        <div class="metric-label">Established</div>
+                        <span id="conn-established" class="cpu-metric-value">--</span>
+                    </div>
+                    <div class="col-6 text-center">
+                        <div class="metric-label">Listening</div>
+                        <span id="conn-listening" class="cpu-metric-value">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CPU Cores Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card section-card">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-microchip me-2"></i> CPU Cores Utilization
+                <button class="btn btn-sm btn-outline-light float-end" onclick="refreshDashboard()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="cpu-cores-container" class="d-flex flex-wrap justify-content-between" style="gap: 8px;">
+                    <div class="col-12 text-center py-4">
+                        <i class="fas fa-spinner fa-spin"></i> Loading CPU cores...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alerts and Statistics Row -->
+<div class="row g-4 mb-4">
+    <div class="col-md-7">
+        <div class="card section-card h-100">
+            <div class="card-header bg-danger text-white">
+                <i class="fas fa-bell me-2"></i> Recent Security Alerts
+                <a href="/alerts" class="btn btn-sm btn-outline-light float-end">View All</a>
+            </div>
+            <div class="card-body p-0" style="max-height: 350px; overflow-y: auto;">
+                <div id="alerts-container" class="list-group list-group-flush">
+                    <div class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin"></i> Loading alerts...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card section-card h-100">
+            <div class="card-header bg-secondary text-white">
+                <i class="fas fa-chart-bar me-2"></i> Alert Statistics
+            </div>
+            <div class="card-body" id="stats-container">
+                <div class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin"></i> Loading statistics...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Active Connections Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card section-card">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-network-wired me-2"></i> Top Active Connections
+                <a href="/connections" class="btn btn-sm btn-outline-light float-end">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Process</th>
+                                <th>Remote IP</th>
+                                <th>Port</th>
+                                <th>Status</th>
+                                <th>Risk</th>
+                            </tr>
+                        </thead>
+                        <tbody id="top-connections-tbody">
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading connections...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Processes Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card section-card">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-microchip me-2"></i> Top Processes (CPU)
+                <a href="/processes" class="btn btn-sm btn-outline-light float-end">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Process Name</th>
+                                <th>PID</th>
+                                <th>CPU %</th>
+                                <th>Memory %</th>
+                                <th>Memory (MB)</th>
+                                <th>User</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="top-processes-tbody">
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading processes...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions at Bottom -->
+<div class="row">
+    <div class="col-12">
+        <div class="card section-card">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-bolt me-2"></i> Quick Actions
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-2 col-6">
+                        <a href="/query" class="btn btn-primary w-100 quick-action-btn">
+                            <i class="fas fa-search me-1"></i> Query
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <a href="/alerts" class="btn btn-warning w-100 quick-action-btn text-dark">
+                            <i class="fas fa-bell me-1"></i> Alerts
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <a href="/logs" class="btn btn-info w-100 quick-action-btn text-white">
+                            <i class="fas fa-file-alt me-1"></i> Logs
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <a href="/connections" class="btn btn-secondary w-100 quick-action-btn">
+                            <i class="fas fa-network-wired me-1"></i> Connections
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <a href="/processes" class="btn btn-secondary w-100 quick-action-btn">
+                            <i class="fas fa-microchip me-1"></i> Processes
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <a href="/report" class="btn btn-danger w-100 quick-action-btn">
+                            <i class="fas fa-file-pdf me-1"></i> Report
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// WebSocket connection
+let socket = io();
+
+socket.on('connect', function() {
+    console.log('WebSocket connected');
+    requestUpdate();
+});
+
+socket.on('system_update', function(data) {
+    if (data.stats) {
+        updateSystemStats(data.stats);
+        updateCPUInfo(data.stats);
+    }
+    if (data.alerts) updateAlertsList(data.alerts);
+    if (data.connections) updateConnectionStats(data.connections);
+    loadTopProcesses();
+});
+
+function requestUpdate() {
+    if (socket && socket.connected) {
+        socket.emit('request_update');
+    }
+}
+
+function refreshDashboard() {
+    requestUpdate();
+    loadAlertStats();
+    loadTopConnections();
+    loadTopProcesses();
+}
+
+function updateSystemStats(stats) {
+    // CPU
+    const cpu = stats.cpu || {};
+    const cpuPercent = cpu.percent || 0;
+    document.getElementById('cpu-percent').innerHTML = cpuPercent + '%';
+    document.getElementById('cpu-progress').style.width = cpuPercent + '%';
+    
+    const times = cpu.times || {};
+    document.getElementById('cpu-user').innerHTML = (times.user || 0) + '%';
+    document.getElementById('cpu-system').innerHTML = (times.system || 0) + '%';
+    document.getElementById('cpu-idle').innerHTML = (times.idle || 0) + '%';
+    
+    // Memory
+    const mem = stats.memory || {};
+    const memPercent = mem.percent || 0;
+    document.getElementById('memory-percent').innerHTML = memPercent + '%';
+    document.getElementById('memory-progress').style.width = memPercent + '%';
+    document.getElementById('memory-used').innerHTML = (mem.used_gb || 0) + 'GB';
+    document.getElementById('memory-total').innerHTML = (mem.total_gb || 0) + 'GB';
+    
+    // Uptime
+    const sys = stats.system || {};
+    document.getElementById('uptime-days').innerHTML = sys.uptime_days || 0;
+    document.getElementById('uptime-hours-minutes').innerHTML = (sys.uptime_hours || 0) + 'h ' + (sys.uptime_minutes || 0) + 'm';
+    document.getElementById('boot-time').innerHTML = sys.boot_time || 'Unknown';
+}
+
+function updateCPUInfo(stats) {
+    const cpu = stats.cpu || {};
+    const coresContainer = document.getElementById('cpu-cores-container');
+    if (!coresContainer) return;
+    
+    if (cpu.percent_per_core && cpu.percent_per_core.length > 0) {
+        let coresHtml = '';
+        cpu.percent_per_core.forEach((core, index) => {
+            const color = core > 80 ? '#e74c3c' : (core > 50 ? '#f39c12' : '#27ae60');
+            coresHtml += `
+                <div class="text-center" style="flex: 1; min-width: 50px;">
+                    <div class="core-bar" style="height: 80px;">
+                        <div class="core-fill" style="height: ${core}%; background-color: ${color};">
+                            <span>${core}%</span>
+                        </div>
+                    </div>
+                    <div class="small mt-1">Core ${index}</div>
+                </div>
+            `;
+        });
+        coresContainer.innerHTML = coresHtml;
+    } else {
+        coresContainer.innerHTML = '<div class="col-12 text-center text-muted">No CPU core data available</div>';
+    }
+}
+
+function updateAlertsList(alerts) {
+    const container = document.getElementById('alerts-container');
+    if (!container) return;
+    
+    if (alerts && alerts.length > 0) {
+        let html = '';
+        alerts.slice(0, 8).forEach(alert => {
+            const severity = alert.severity || 'LOW';
+            const severityClass = severity === 'HIGH' ? 'alert-high' : (severity === 'MEDIUM' ? 'alert-medium' : 'alert-low');
+            const badgeClass = severity === 'HIGH' ? 'danger' : (severity === 'MEDIUM' ? 'warning' : 'info');
+            
+            html += `
+                <div class="list-group-item alert-item ${severityClass}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>${escapeHtml(alert.rule_name)}</strong>
+                        <span class="badge bg-${badgeClass}">${severity}</span>
+                    </div>
+                    <small class="text-muted">${formatTimestamp(alert.timestamp)}</small>
+                    <div class="small mt-1">${escapeHtml((alert.details || '').substring(0, 120))}</div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    } else {
+        container.innerHTML = '<div class="text-center py-4 text-muted"><i class="fas fa-check-circle fa-2x mb-2"></i><br>No recent alerts</div>';
+    }
+}
+
+function updateConnectionStats(connStats) {
+    if (!connStats) return;
+    document.getElementById('conn-count').innerHTML = connStats.total || 0;
+    document.getElementById('conn-established').innerHTML = connStats.established || 0;
+    document.getElementById('conn-listening').innerHTML = connStats.listening || 0;
+}
+
+function loadAlertStats() {
+    fetch('/api/alerts/stats')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data) {
+                const stats = data.data;
+                const total = stats.total || 0;
+                const high = stats.by_severity?.HIGH || 0;
+                const medium = stats.by_severity?.MEDIUM || 0;
+                const low = stats.by_severity?.LOW || 0;
+                
+                const highPercent = total ? (high / total * 100) : 0;
+                const mediumPercent = total ? (medium / total * 100) : 0;
+                const lowPercent = total ? (low / total * 100) : 0;
+                
+                document.getElementById('stats-container').innerHTML = `
+                    <div class="text-center mb-4">
+                        <h1 class="display-4">${total}</h1>
+                        <small class="text-muted">Total Alerts</small>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span><i class="fas fa-circle text-danger"></i> HIGH</span>
+                            <span class="fw-bold">${high}</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-danger" style="width: ${highPercent}%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span><i class="fas fa-circle text-warning"></i> MEDIUM</span>
+                            <span class="fw-bold">${medium}</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-warning" style="width: ${mediumPercent}%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span><i class="fas fa-circle text-info"></i> LOW</span>
+                            <span class="fw-bold">${low}</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-info" style="width: ${lowPercent}%"></div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="small text-muted">
+                        <div><i class="fas fa-calendar-day me-1"></i> Last 24h: ${stats.last_24h || 0}</div>
+                        <div><i class="fas fa-calendar-week me-1"></i> Last 7d: ${stats.last_7d || 0}</div>
+                    </div>
+                `;
+            }
+        });
+}
+
+function loadTopConnections() {
+    fetch('/api/connections/all')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('top-connections-tbody');
+            if (!container) return;
+            
+            if (data.success && data.data && data.data.length > 0) {
+                const connections = data.data.slice(0, 8);
+                let html = '';
+                connections.forEach(conn => {
+                    let riskIcon = '';
+                    let riskClass = '';
+                    const port = conn.remote_port;
+                    if (port && [4444, 1337, 31337].includes(port)) {
+                        riskIcon = '<i class="fas fa-skull-crosswalk risk-high"></i>';
+                        riskClass = 'risk-high';
+                    } else if (port && [5555, 6666, 6667].includes(port)) {
+                        riskIcon = '<i class="fas fa-exclamation-triangle risk-medium"></i>';
+                        riskClass = 'risk-medium';
+                    } else {
+                        riskIcon = '<i class="fas fa-check-circle risk-low"></i>';
+                        riskClass = 'risk-low';
+                    }
+                    
+                    let statusClass = '';
+                    if (conn.status === 'ESTABLISHED') statusClass = 'status-established';
+                    else if (conn.status === 'LISTEN') statusClass = 'status-listen';
+                    else if (conn.status === 'TIME_WAIT') statusClass = 'status-timewait';
+                    
+                    html += `
+                        <tr class="connection-row" onclick="window.location.href='/connections'">
+                            <td><small>${escapeHtml(conn.process || 'Unknown')}</small></td>
+                            <td><code><small>${escapeHtml(conn.remote_ip || 'N/A')}</small></code></td>
+                            <td><small>${escapeHtml(conn.remote_port || 'N/A')}</small></td>
+                            <td><span class="status-badge ${statusClass}">${escapeHtml(conn.status || 'N/A')}</span></td>
+                            <td class="text-center ${riskClass}">${riskIcon}</td>
+                        </tr>
+                    `;
+                });
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted"><i class="fas fa-plug fa-2x mb-2 d-block"></i>No active connections</td></tr>';
+            }
+        });
+}
+
+function loadTopProcesses() {
+    fetch('/api/processes/all')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('top-processes-tbody');
+            if (!container) return;
+            
+            if (data.success && data.data && data.data.length > 0) {
+                const processes = [...data.data]
+                    .sort((a, b) => (b.cpu_percent || 0) - (a.cpu_percent || 0))
+                    .slice(0, 8);
+                
+                let html = '';
+                processes.forEach(proc => {
+                    const cpuPercent = proc.cpu_percent || 0;
+                    const memoryPercent = proc.memory_percent || 0;
+                    const memoryMB = proc.memory_mb || 0;
+                    
+                    let cpuColorClass = '';
+                    if (cpuPercent > 50) cpuColorClass = 'text-danger fw-bold';
+                    else if (cpuPercent > 25) cpuColorClass = 'text-warning';
+                    else cpuColorClass = 'text-success';
+                    
+                    let memColorClass = '';
+                    if (memoryPercent > 50) memColorClass = 'text-danger';
+                    else if (memoryPercent > 25) memColorClass = 'text-warning';
+                    else memColorClass = 'text-success';
+                    
+                    const suspiciousProcesses = ['powershell.exe', 'cmd.exe', 'wscript.exe', 'cscript.exe', 'rundll32.exe', 'regsvr32.exe'];
+                    const isSuspicious = suspiciousProcesses.includes(proc.name?.toLowerCase());
+                    
+                    html += `
+                        <tr class="process-row" onclick="window.location.href='/processes'">
+                            <td>
+                                <i class="fas ${isSuspicious ? 'fa-exclamation-triangle text-warning' : 'fa-microchip'} me-1"></i>
+                                <strong>${escapeHtml(proc.name || 'Unknown')}</strong>
+                                ${isSuspicious ? '<span class="badge bg-warning text-dark ms-1">!</span>' : ''}
+                            </td>
+                            <td>${proc.pid || 'N/A'}</td>
+                            <td class="${cpuColorClass}"><strong>${cpuPercent.toFixed(1)}%</strong></td>
+                            <td class="${memColorClass}">${memoryPercent.toFixed(1)}%</td>
+                            <td>${memoryMB.toFixed(0)} MB</td>
+                            <td><small>${escapeHtml(proc.username || 'Unknown')}</small></td>
+                            <td>
+                                ${isSuspicious ? 
+                                    '<span class="badge bg-warning text-dark">SUSPICIOUS</span>' : 
+                                    '<span class="badge bg-success">RUNNING</span>'
+                                }
+                            </td>
+                        </tr>
+                    `;
+                });
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><i class="fas fa-microchip fa-2x mb-2 d-block"></i>No processes found</td></tr>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading top processes:', error);
+            const container = document.getElementById('top-processes-tbody');
+            if (container) {
+                container.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle"></i> Failed to load processes</td></tr>';
+            }
+        });
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatTimestamp(timestamp) {
+    if (!timestamp) return 'N/A';
+    try {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = Math.floor((now - date) / 1000);
+        
+        if (diff < 60) return `${diff} seconds ago`;
+        if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+        return date.toLocaleDateString();
+    } catch {
+        return timestamp;
+    }
+}
+
+// Initial load
+document.addEventListener('DOMContentLoaded', function() {
+    refreshDashboard();
+    setInterval(refreshDashboard, 1000);
+});
+</script>
+{% endblock %}

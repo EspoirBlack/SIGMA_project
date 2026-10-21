@@ -1,0 +1,791 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Processes Page Specific Styles */
+    .stats-container {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .stats-container .stats-card {
+        flex: 1;
+        min-width: 120px;
+        background: linear-gradient(135deg, #2c3e50 0%, #1a2b3c 100%);
+        border-radius: 12px;
+        padding: 15px 8px;
+        text-align: center;
+        color: white;
+        transition: transform 0.2s ease;
+    }
+    
+    .stats-container .stats-card:hover {
+        transform: translateY(-3px);
+    }
+    
+    .stats-container .risk-high {
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    }
+    
+    .stats-container .risk-medium {
+        background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    }
+    
+    .stats-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        line-height: 1.2;
+    }
+    
+    .stats-label {
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        opacity: 0.8;
+    }
+    
+    @media (max-width: 992px) {
+        .stats-container .stats-card {
+            flex: 1 1 calc(33.33% - 12px);
+            min-width: calc(33.33% - 12px);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .stats-container .stats-card {
+            flex: 1 1 calc(50% - 12px);
+            min-width: calc(50% - 12px);
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .stats-container .stats-card {
+            flex: 1 1 100%;
+            min-width: 100%;
+        }
+    }
+    
+    .process-row {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .process-row:hover {
+        background-color: rgba(52, 152, 219, 0.1);
+        transform: translateX(3px);
+    }
+    
+    .suspicious-row {
+        background-color: rgba(231, 76, 60, 0.05);
+        border-left: 3px solid #e74c3c;
+    }
+    
+    .high-cpu {
+        color: #e74c3c;
+        font-weight: bold;
+    }
+    
+    .high-memory {
+        color: #f39c12;
+        font-weight: bold;
+    }
+    
+    .quick-filter-btn {
+        transition: all 0.2s ease;
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-size: 0.75rem;
+        cursor: pointer;
+    }
+    
+    .quick-filter-btn:hover {
+        background-color: #3498db;
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .quick-filter-btn.active {
+        background-color: #3498db;
+        color: white;
+        border-color: #3498db;
+    }
+    
+    .refresh-btn {
+        transition: all 0.2s ease;
+    }
+    
+    .refresh-btn:hover {
+        transform: rotate(180deg);
+    }
+    
+    .loading-spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid rgba(52,152,219,0.3);
+        border-radius: 50%;
+        border-top-color: #3498db;
+        animation: spin 0.6s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .process-detail {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+    
+    body.dark-mode .process-detail {
+        background-color: #1a1f2e;
+    }
+    
+    .sticky-top {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .resource-bar {
+        width: 100%;
+        height: 4px;
+        background-color: #ecf0f1;
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 4px;
+    }
+    
+    .resource-fill {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+    
+    .cpu-fill { background-color: #3498db; }
+    .memory-fill { background-color: #27ae60; }
+</style>
+
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-3"><i class="fas fa-microchip me-2"></i> Process Monitor</h2>
+        <hr>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="stats-container">
+    <div class="stats-card">
+        <div class="stats-number" id="total-processes">0</div>
+        <div class="stats-label">Total Processes</div>
+    </div>
+    <div class="stats-card risk-high">
+        <div class="stats-number" id="suspicious-processes">0</div>
+        <div class="stats-label">Suspicious</div>
+    </div>
+    <div class="stats-card risk-medium">
+        <div class="stats-number" id="high-cpu-processes">0</div>
+        <div class="stats-label">High CPU (>50%)</div>
+    </div>
+    <div class="stats-card">
+        <div class="stats-number" id="total-memory">0</div>
+        <div class="stats-label">Total Memory (GB)</div>
+    </div>
+</div>
+
+<!-- Filters Section -->
+<div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+        <i class="fas fa-filter me-2"></i> Filters & Controls
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Sort By</label>
+                <select id="sort-by" class="form-select">
+                    <option value="cpu">CPU % (High to Low)</option>
+                    <option value="memory">Memory % (High to Low)</option>
+                    <option value="name">Name (A-Z)</option>
+                    <option value="pid">PID (Low to High)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">User Filter</label>
+                <select id="user-filter" class="form-select">
+                    <option value="all">All Users</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">Search</label>
+                <input type="text" id="process-search" class="form-control" placeholder="Search by process name...">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button onclick="refreshProcesses()" class="btn btn-primary w-100">
+                    <i class="fas fa-sync-alt me-1"></i> Refresh
+                </button>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-12">
+                <label class="form-label small fw-bold">Quick Filters</label>
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-sm btn-outline-secondary quick-filter-btn active" id="filter-all" onclick="filterByType('all')">
+                        <i class="fas fa-list me-1"></i> All Processes
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary quick-filter-btn" id="filter-suspicious" onclick="filterByType('suspicious')">
+                        <i class="fas fa-skull-crosswalk text-danger me-1"></i> Suspicious
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary quick-filter-btn" id="filter-high-cpu" onclick="filterByType('high-cpu')">
+                        <i class="fas fa-chart-line text-warning me-1"></i> High CPU (>50%)
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary quick-filter-btn" id="filter-high-memory" onclick="filterByType('high-memory')">
+                        <i class="fas fa-memory text-info me-1"></i> High Memory (>50%)
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">
+                        <i class="fas fa-eraser me-1"></i> Clear All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Auto-refresh Toggle and Action Buttons -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="auto-refresh" checked>
+                <label class="form-check-label" for="auto-refresh">
+                    <i class="fas fa-sync-alt"></i> Auto-refresh (every 5 seconds)
+                </label>
+                <span class="badge bg-info ms-2" id="process-count-badge">0 processes</span>
+            </div>
+            <div class="action-buttons">
+                <button onclick="refreshProcesses()" class="btn btn-outline-primary" title="Refresh Now">
+                    <i class="fas fa-sync-alt refresh-btn"></i> Refresh
+                </button>
+                <button onclick="exportProcesses()" class="btn btn-outline-secondary">
+                    <i class="fas fa-download me-1"></i> Export CSV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Processes Table - No Pagination -->
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        <i class="fas fa-table me-2"></i> Running Processes
+        <span id="loading-indicator" class="ms-2" style="display: none;">
+            <span class="loading-spinner"></span>
+        </span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark sticky-top">
+                     
+                        <th style="width: 40px"><i class="fas fa-chart-line"></i></th>
+                        <th>Process Name</th>
+                        <th>PID</th>
+                        <th>CPU %</th>
+                        <th>Memory %</th>
+                        <th>Memory (MB)</th>
+                        <th>User</th>
+                        <th>Parent Process</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </thead>
+                <tbody id="processes-tbody">
+                     
+                        <td colspan="10" class="text-center py-5">
+                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                            <p>Loading processes...</p>
+                         
+                     
+                </tbody>
+             
+        </div>
+    </div>
+</div>
+
+<!-- Process Detail Modal -->
+<div class="modal fade" id="processModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" id="modal-header">
+                <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i> Process Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="process-detail-body">
+                Loading...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" id="kill-process-modal-btn">
+                    <i class="fas fa-skull"></i> Terminate Process
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let allProcesses = [];
+let filteredProcesses = [];
+let autoRefreshInterval = null;
+let currentFilterType = 'all';
+let selectedProcessPid = null;
+
+// Suspicious processes list
+const suspiciousProcesses = ['powershell.exe', 'cmd.exe', 'wscript.exe', 'cscript.exe', 'rundll32.exe', 'regsvr32.exe', 'mshta.exe', 'wmic.exe'];
+
+// Refresh processes
+function refreshProcesses() {
+    const loadingIndicator = document.getElementById('loading-indicator');
+    if (loadingIndicator) loadingIndicator.style.display = 'inline-block';
+    
+    fetch('/api/processes/all')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                allProcesses = data.data || [];
+                updateStats();
+                filterAndDisplay();
+                const countBadge = document.getElementById('process-count-badge');
+                if (countBadge) countBadge.innerText = allProcesses.length + ' processes';
+            } else {
+                console.error("API Error:", data.error);
+                showError(data.error);
+            }
+        })
+        .catch(error => {
+            console.error("Fetch error:", error);
+            showError(error.message);
+        })
+        .finally(() => {
+            if (loadingIndicator) loadingIndicator.style.display = 'none';
+        });
+}
+
+// Show error
+function showError(errorMsg) {
+    const tbody = document.getElementById('processes-tbody');
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="text-center py-5 text-danger">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                    <p>Failed to load processes: ${errorMsg}</p>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// Update statistics cards
+function updateStats() {
+    const total = allProcesses.length;
+    const suspicious = allProcesses.filter(p => suspiciousProcesses.includes(p.name?.toLowerCase())).length;
+    const highCpu = allProcesses.filter(p => (p.cpu_percent || 0) > 50).length;
+    const totalMemoryMB = allProcesses.reduce((sum, p) => sum + (p.memory_mb || 0), 0);
+    
+    const totalElem = document.getElementById('total-processes');
+    const suspiciousElem = document.getElementById('suspicious-processes');
+    const highCpuElem = document.getElementById('high-cpu-processes');
+    const totalMemoryElem = document.getElementById('total-memory');
+    
+    if (totalElem) totalElem.innerText = total;
+    if (suspiciousElem) suspiciousElem.innerText = suspicious;
+    if (highCpuElem) highCpuElem.innerText = highCpu;
+    if (totalMemoryElem) totalMemoryElem.innerText = (totalMemoryMB / 1024).toFixed(1);
+    
+    // Update user filter dropdown
+    const users = [...new Set(allProcesses.map(p => p.username).filter(u => u))];
+    users.sort();
+    let options = '<option value="all">All Users</option>';
+    users.forEach(user => {
+        options += `<option value="${escapeHtml(user)}">${escapeHtml(user)}</option>`;
+    });
+    const userFilter = document.getElementById('user-filter');
+    if (userFilter) userFilter.innerHTML = options;
+}
+
+// Filter by type
+function filterByType(type) {
+    currentFilterType = type;
+    
+    // Update active state on buttons
+    document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    if (type === 'all') {
+        const btn = document.getElementById('filter-all');
+        if (btn) btn.classList.add('active');
+    } else if (type === 'suspicious') {
+        const btn = document.getElementById('filter-suspicious');
+        if (btn) btn.classList.add('active');
+    } else if (type === 'high-cpu') {
+        const btn = document.getElementById('filter-high-cpu');
+        if (btn) btn.classList.add('active');
+    } else if (type === 'high-memory') {
+        const btn = document.getElementById('filter-high-memory');
+        if (btn) btn.classList.add('active');
+    }
+    
+    filterAndDisplay();
+}
+
+// Clear filters
+function clearFilters() {
+    currentFilterType = 'all';
+    const sortBy = document.getElementById('sort-by');
+    const userFilter = document.getElementById('user-filter');
+    const processSearch = document.getElementById('process-search');
+    
+    if (sortBy) sortBy.value = 'cpu';
+    if (userFilter) userFilter.value = 'all';
+    if (processSearch) processSearch.value = '';
+    
+    document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    const allBtn = document.getElementById('filter-all');
+    if (allBtn) allBtn.classList.add('active');
+    
+    filterAndDisplay();
+}
+
+// Filter and display processes
+function filterAndDisplay() {
+    let filtered = [...allProcesses];
+    
+    // Filter by type
+    if (currentFilterType === 'suspicious') {
+        filtered = filtered.filter(p => suspiciousProcesses.includes(p.name?.toLowerCase()));
+    } else if (currentFilterType === 'high-cpu') {
+        filtered = filtered.filter(p => (p.cpu_percent || 0) > 50);
+    } else if (currentFilterType === 'high-memory') {
+        filtered = filtered.filter(p => (p.memory_percent || 0) > 50);
+    }
+    
+    // Filter by user
+    const userFilter = document.getElementById('user-filter');
+    const selectedUser = userFilter ? userFilter.value : 'all';
+    if (selectedUser !== 'all') {
+        filtered = filtered.filter(p => p.username === selectedUser);
+    }
+    
+    // Filter by search
+    const processSearch = document.getElementById('process-search');
+    const searchTerm = processSearch ? processSearch.value.toLowerCase() : '';
+    if (searchTerm) {
+        filtered = filtered.filter(p => p.name?.toLowerCase().includes(searchTerm));
+    }
+    
+    // Sort
+    const sortBy = document.getElementById('sort-by');
+    const sortValue = sortBy ? sortBy.value : 'cpu';
+    if (sortValue === 'cpu') {
+        filtered.sort((a, b) => (b.cpu_percent || 0) - (a.cpu_percent || 0));
+    } else if (sortValue === 'memory') {
+        filtered.sort((a, b) => (b.memory_percent || 0) - (a.memory_percent || 0));
+    } else if (sortValue === 'name') {
+        filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } else if (sortValue === 'pid') {
+        filtered.sort((a, b) => (a.pid || 0) - (b.pid || 0));
+    }
+    
+    filteredProcesses = filtered;
+    displayProcesses();
+}
+
+// Display processes (all in one list)
+function displayProcesses() {
+    const processInfo = document.getElementById('process-info');
+    if (processInfo) processInfo.innerText = `Showing ${filteredProcesses.length} processes`;
+    
+    const tbody = document.getElementById('processes-tbody');
+    if (!tbody) return;
+    
+    if (filteredProcesses.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="text-center py-5 text-muted">
+                    <i class="fas fa-inbox fa-2x mb-2"></i>
+                    <p>No processes found</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    let html = '';
+    filteredProcesses.forEach(proc => {
+        const isSuspicious = suspiciousProcesses.includes(proc.name?.toLowerCase());
+        const cpuPercent = proc.cpu_percent || 0;
+        const memoryPercent = proc.memory_percent || 0;
+        const cpuClass = cpuPercent > 50 ? 'high-cpu' : '';
+        const memoryClass = memoryPercent > 50 ? 'high-memory' : '';
+        const rowClass = isSuspicious ? 'suspicious-row' : '';
+        
+        const cpuBarWidth = Math.min(cpuPercent, 100);
+        const memBarWidth = Math.min(memoryPercent, 100);
+        
+        html += `
+            <tr class="process-row ${rowClass}" onclick="showProcessDetail(${JSON.stringify(proc).replace(/"/g, '&quot;')})">
+                <td class="text-center"><i class="fas ${isSuspicious ? 'fa-skull-crosswalk text-danger' : 'fa-microchip'}"></i></td>
+                <td><strong>${escapeHtml(proc.name || 'Unknown')}</strong>${isSuspicious ? ' <span class="badge bg-danger ms-1">!</span>' : ''}</td>
+                <td>${proc.pid || 'N/A'}</td>
+                <td class="${cpuClass}">
+                    <strong>${cpuPercent.toFixed(1)}%</strong>
+                    <div class="resource-bar"><div class="resource-fill cpu-fill" style="width: ${cpuBarWidth}%"></div></div>
+                </td>
+                <td class="${memoryClass}">
+                    <strong>${memoryPercent.toFixed(1)}%</strong>
+                    <div class="resource-bar"><div class="resource-fill memory-fill" style="width: ${memBarWidth}%"></div></div>
+                </td>
+                <td>${(proc.memory_mb || 0).toFixed(0)} MB</td>
+                <td><small>${escapeHtml(proc.username || 'Unknown')}</small></td>
+                <td><small>${escapeHtml(proc.parent_name || 'N/A')}</small></td>
+                <td>
+                    ${isSuspicious ? 
+                        '<span class="badge bg-danger">SUSPICIOUS</span>' : 
+                        '<span class="badge bg-success">RUNNING</span>'
+                    }
+                </td>
+                <td onclick="event.stopPropagation()">
+                    <button class="btn btn-sm btn-outline-danger" onclick="killProcess(${proc.pid}, '${escapeHtml(proc.name)}')" title="Terminate Process">
+                        <i class="fas fa-skull"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+// Show process detail modal
+function showProcessDetail(proc) {
+    selectedProcessPid = proc.pid;
+    const isSuspicious = suspiciousProcesses.includes(proc.name?.toLowerCase());
+    const modalHeader = document.getElementById('modal-header');
+    if (modalHeader) {
+        modalHeader.className = `modal-header ${isSuspicious ? 'bg-danger' : 'bg-dark'} text-white`;
+    }
+    
+    const cpuPercent = proc.cpu_percent || 0;
+    const memoryPercent = proc.memory_percent || 0;
+    const cpuBarWidth = Math.min(cpuPercent, 100);
+    const memBarWidth = Math.min(memoryPercent, 100);
+    
+    let securityWarning = '';
+    if (isSuspicious) {
+        securityWarning = `
+            <div class="alert alert-danger">
+                <i class="fas fa-skull-crosswalk me-2"></i>
+                <strong>SECURITY WARNING:</strong> ${proc.name} is commonly used by attackers for malicious activities.
+                If this process is not expected, investigate immediately and consider terminating it.
+            </div>
+        `;
+    } else if (cpuPercent > 80) {
+        securityWarning = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>PERFORMANCE WARNING:</strong> This process is consuming ${cpuPercent.toFixed(1)}% CPU.
+                High CPU usage may indicate performance issues or malicious activity.
+            </div>
+        `;
+    }
+    
+    const html = `
+        <div>
+            <div class="process-detail">
+                <h6><i class="fas fa-microchip me-2"></i> Process Information</h6>
+                <table class="table table-sm">
+                    <tr><th style="width: 120px">Process Name:</th><td><strong>${escapeHtml(proc.name || 'Unknown')}</strong>${isSuspicious ? ' <span class="badge bg-danger">SUSPICIOUS</span>' : ''}</td></tr>
+                    <tr><th>Process ID (PID):</th><td>${proc.pid || 'N/A'}</td></tr>
+                    <tr><th>Parent Process:</th><td>${escapeHtml(proc.parent_name || 'N/A')} (PID: ${proc.parent_pid || 'N/A'})</td></tr>
+                    <tr><th>Username:</th><td>${escapeHtml(proc.username || 'Unknown')}</td></tr>
+                    <tr><th>Executable Path:</th><td><code><small>${escapeHtml(proc.exe || 'Unknown')}</small></code></td></tr>
+                    <tr><th>Created:</th><td>${proc.create_time || 'Unknown'}</td></tr>
+                </table>
+            </div>
+            
+            <div class="process-detail">
+                <h6><i class="fas fa-chart-line me-2"></i> Resource Usage</h6>
+                <table class="table table-sm">
+                    <tr>
+                        <th>CPU Usage:</th>
+                        <td>
+                            <strong>${cpuPercent.toFixed(1)}%</strong>
+                            <div class="resource-bar"><div class="resource-fill cpu-fill" style="width: ${cpuBarWidth}%"></div></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Memory Usage:</th>
+                        <td>
+                            <strong>${memoryPercent.toFixed(1)}%</strong> (${(proc.memory_mb || 0).toFixed(0)} MB)
+                            <div class="resource-bar"><div class="resource-fill memory-fill" style="width: ${memBarWidth}%"></div></div>
+                        </td>
+                    </tr>
+                    <tr><th>CPU Time (User):</th><td>${(proc.cpu_user || 0).toFixed(2)} seconds</td></tr>
+                    <tr><th>CPU Time (System):</th><td>${(proc.cpu_system || 0).toFixed(2)} seconds</td></tr>
+                </table>
+            </div>
+            
+            ${securityWarning}
+            
+            <div class="process-detail">
+                <h6><i class="fas fa-shield-alt me-2"></i> Recommended Actions</h6>
+                ${isSuspicious ? 
+                    '<p>• <strong>Immediate action recommended:</strong> Investigate this process. If unauthorized, terminate it immediately.<br>• Run a full antivirus scan.<br>• Check for associated registry entries and scheduled tasks.</p>' :
+                    cpuPercent > 80 ? 
+                    '<p>• <strong>Performance issue detected:</strong> This process is consuming high CPU.<br>• Consider terminating if not critical.<br>• Check for updates or configuration issues.</p>' :
+                    '<p>• No immediate action required.<br>• Continue monitoring for unusual behavior.<br>• Keep system and software updated.</p>'
+                }
+            </div>
+        </div>
+    `;
+    
+    const detailBody = document.getElementById('process-detail-body');
+    if (detailBody) detailBody.innerHTML = html;
+    
+    new bootstrap.Modal(document.getElementById('processModal')).show();
+}
+
+// Kill process
+function killProcess(pid, processName) {
+    if (confirm(`Are you sure you want to terminate process "${processName}" (PID: ${pid})?`)) {
+        fetch('/api/processes/kill', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pids: [pid] })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.terminated.includes(pid)) {
+                alert(`Process ${processName} (PID: ${pid}) terminated successfully.`);
+                refreshProcesses();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('processModal'));
+                if (modal) modal.hide();
+            } else {
+                alert(`Failed to terminate process: ${data.failed?.[0]?.error || 'Unknown error'}`);
+            }
+        })
+        .catch(error => alert(`Error: ${error.message}`));
+    }
+}
+
+// Export processes to CSV
+function exportProcesses() {
+    if (filteredProcesses.length === 0) {
+        alert('No processes to export');
+        return;
+    }
+    
+    const exportData = filteredProcesses.map(p => ({
+        name: p.name,
+        pid: p.pid,
+        cpu_percent: p.cpu_percent,
+        memory_percent: p.memory_percent,
+        memory_mb: p.memory_mb,
+        username: p.username,
+        parent_process: p.parent_name,
+        exe_path: p.exe
+    }));
+    
+    const headers = Object.keys(exportData[0]);
+    const csvRows = [headers.join(',')];
+    
+    for (const row of exportData) {
+        const values = headers.map(header => {
+            let value = row[header] || '';
+            if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+                value = `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+        });
+        csvRows.push(values.join(','));
+    }
+    
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sigma_processes_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    alert(`Exported ${exportData.length} processes`);
+}
+
+// Escape HTML
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Event listeners for filters
+const sortBy = document.getElementById('sort-by');
+if (sortBy) sortBy.addEventListener('change', () => filterAndDisplay());
+
+const userFilter = document.getElementById('user-filter');
+if (userFilter) userFilter.addEventListener('change', () => filterAndDisplay());
+
+const processSearch = document.getElementById('process-search');
+if (processSearch) processSearch.addEventListener('keyup', () => filterAndDisplay());
+
+// Modal kill button
+const killModalBtn = document.getElementById('kill-process-modal-btn');
+if (killModalBtn) {
+    killModalBtn.addEventListener('click', () => {
+        if (selectedProcessPid) {
+            const proc = allProcesses.find(p => p.pid === selectedProcessPid);
+            if (proc) {
+                killProcess(proc.pid, proc.name);
+            }
+        }
+    });
+}
+
+// Auto-refresh
+function setupAutoRefresh() {
+    const autoRefreshCheckbox = document.getElementById('auto-refresh');
+    
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+    
+    if (autoRefreshCheckbox && autoRefreshCheckbox.checked) {
+        autoRefreshInterval = setInterval(refreshProcesses, 5000);
+    }
+    
+    if (autoRefreshCheckbox) {
+        autoRefreshCheckbox.addEventListener('change', setupAutoRefresh);
+    }
+}
+
+// Initial load
+document.addEventListener('DOMContentLoaded', () => {
+    refreshProcesses();
+    setupAutoRefresh();
+});
+</script>
+{% endblock %}

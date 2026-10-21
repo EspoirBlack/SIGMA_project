@@ -1,0 +1,27 @@
+# Core Web Framework
+flask
+flask-socketio
+
+# Windows Event Log Access
+pywin32
+
+# System Monitoring (Processes, Network, CPU, Memory)
+psutil
+
+# Data Handling
+pandas
+
+# HTTP Requests (for VirusTotal API)
+requests
+
+# PDF Report Generation
+reportlab
+
+# DNS Resolution (for reverse lookups)
+dnspython
+
+# WMI for USB device detection
+wmi
+
+# Optional: for better JSON handling (already in stdlib)
+simplejson

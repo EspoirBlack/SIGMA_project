@@ -1,0 +1,670 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Report Page Specific Styles */
+    .report-option-card {
+        border: 2px solid var(--border-color, #e0e0e0);
+        border-radius: 12px;
+        padding: 15px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background-color: var(--bg-secondary, white);
+    }
+    
+    .report-option-card:hover {
+        border-color: #3498db;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .report-option-card.selected {
+        border-color: #3498db;
+        background-color: rgba(52, 152, 219, 0.05);
+    }
+    
+    .preview-section {
+        background-color: var(--bg-secondary, white);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .preview-section h6 {
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+    
+    .preview-stats {
+        border-left-color: #3498db;
+    }
+    
+    .preview-alerts {
+        border-left-color: #e74c3c;
+    }
+    
+    .preview-connections {
+        border-left-color: #27ae60;
+    }
+    
+    .preview-recommendations {
+        border-left-color: #f39c12;
+    }
+    
+    .stat-badge {
+        background: linear-gradient(135deg, #2c3e50 0%, #1a2b3c 100%);
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+        color: white;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    
+    .stat-label {
+        font-size: 0.7rem;
+        opacity: 0.8;
+    }
+    
+    .preview-alert-item {
+        padding: 10px;
+        border-bottom: 1px solid var(--border-color, #e0e0e0);
+    }
+    
+    .preview-alert-item:last-child {
+        border-bottom: none;
+    }
+    
+    .schedule-card {
+        background: linear-gradient(135deg, #2c3e50 0%, #1a2b3c 100%);
+        border-radius: 12px;
+        padding: 15px;
+        color: white;
+    }
+    
+    .btn-schedule {
+        background-color: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+    }
+    
+    .btn-schedule:hover {
+        background-color: rgba(255,255,255,0.3);
+    }
+</style>
+
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-3"><i class="fas fa-file-pdf me-2"></i> Report Generator</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Left Panel - Settings -->
+    <div class="col-lg-4">
+        <!-- Report Type Selection -->
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-chart-simple me-2"></i> Report Type
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="report-option-card" id="option-full" onclick="selectReportType('full')">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas fa-file-alt fa-2x text-primary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Full Report</h6>
+                                    <small class="text-muted">Comprehensive security analysis with all sections</small>
+                                </div>
+                                <div class="ms-auto">
+                                    <i class="fas fa-check-circle text-success" id="full-check" style="display: none;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="report-option-card" id="option-quick" onclick="selectReportType('quick')">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas fa-file-pdf fa-2x text-danger"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Quick Summary</h6>
+                                    <small class="text-muted">Executive summary with key findings only</small>
+                                </div>
+                                <div class="ms-auto">
+                                    <i class="fas fa-check-circle text-success" id="quick-check" style="display: none;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Time Range -->
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-calendar-alt me-2"></i> Time Range
+            </div>
+            <div class="card-body">
+                <select id="hours-range" class="form-select">
+                    <option value="1">Last 1 hour</option>
+                    <option value="6">Last 6 hours</option>
+                    <option value="12">Last 12 hours</option>
+                    <option value="24" selected>Last 24 hours</option>
+                    <option value="48">Last 48 hours</option>
+                    <option value="168">Last 7 days</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Include Sections -->
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-check-square me-2"></i> Include Sections
+            </div>
+            <div class="card-body">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="include-alerts" checked>
+                    <label class="form-check-label" for="include-alerts">
+                        <i class="fas fa-bell text-danger me-1"></i> Security Alerts
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="include-stats" checked>
+                    <label class="form-check-label" for="include-stats">
+                        <i class="fas fa-chart-line text-info me-1"></i> System Statistics
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="include-connections" checked>
+                    <label class="form-check-label" for="include-connections">
+                        <i class="fas fa-network-wired text-success me-1"></i> Network Connections
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="include-logs" checked>
+                    <label class="form-check-label" for="include-logs">
+                        <i class="fas fa-file-alt text-warning me-1"></i> Log Summary
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="include-recommendations" checked>
+                    <label class="form-check-label" for="include-recommendations">
+                        <i class="fas fa-lightbulb text-warning me-1"></i> Recommendations
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Generate Button -->
+        <div class="card">
+            <div class="card-body">
+                <button onclick="generateReport()" class="btn btn-danger w-100 py-3" id="generate-btn">
+                    <i class="fas fa-file-pdf me-2"></i> Generate PDF Report
+                </button>
+                <div id="generate-status" class="mt-3 text-center" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <p class="mt-2 mb-0">Generating report...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Schedule (Coming Soon) -->
+        <div class="card mt-4">
+            <div class="card-body schedule-card">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-calendar-plus fa-2x me-3"></i>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-0">Scheduled Reports</h6>
+                        <small>Coming soon - Automatic daily reports</small>
+                    </div>
+                    <button class="btn btn-schedule btn-sm" disabled>
+                        <i class="fas fa-lock"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Panel - Preview -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-eye me-2"></i> Report Preview
+                <button class="btn btn-sm btn-outline-light float-end" onclick="refreshPreview()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body" id="preview-container">
+                <div class="text-center py-5">
+                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Select report type and settings to see preview</p>
+                    <button class="btn btn-primary btn-sm" onclick="refreshPreview()">
+                        <i class="fas fa-eye"></i> Load Preview
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Reports -->
+        <div class="card mt-4">
+            <div class="card-header bg-dark text-white">
+                <i class="fas fa-history me-2"></i> Recent Reports
+            </div>
+            <div class="card-body" id="reports-list">
+                <div class="text-center py-3">
+                    <i class="fas fa-spinner fa-spin"></i> Loading reports...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentReportType = 'full';
+let currentPreviewData = null;
+
+// Select report type
+function selectReportType(type) {
+    currentReportType = type;
+    
+    // Update UI
+    document.getElementById('full-check').style.display = 'none';
+    document.getElementById('quick-check').style.display = 'none';
+    
+    if (type === 'full') {
+        document.getElementById('full-check').style.display = 'inline-block';
+        document.getElementById('option-full').classList.add('selected');
+        document.getElementById('option-quick').classList.remove('selected');
+    } else {
+        document.getElementById('quick-check').style.display = 'inline-block';
+        document.getElementById('option-quick').classList.add('selected');
+        document.getElementById('option-full').classList.remove('selected');
+    }
+    
+    refreshPreview();
+}
+
+// Load recent reports
+function loadRecentReports() {
+    fetch('/api/reports/list')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('reports-list');
+            if (data.success && data.files && data.files.length > 0) {
+                let html = '<div class="list-group">';
+                data.files.slice(0, 5).forEach(file => {
+                    const date = new Date(file.date);
+                    html += `
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-file-pdf text-danger me-2"></i>
+                                <strong>${escapeHtml(file.name)}</strong>
+                                <br><small class="text-muted">${file.size} bytes • ${date.toLocaleString()}</small>
+                            </div>
+                            <a href="/api/report/download/${file.name}" class="btn btn-sm btn-danger">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-folder-open fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No reports generated yet</p>
+                        <small class="text-muted">Generate a report to see it here</small>
+                    </div>
+                `;
+            }
+        })
+        .catch(() => {
+            document.getElementById('reports-list').innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-folder-open fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">Reports saved to reports/ directory</p>
+                </div>
+            `;
+        });
+}
+
+// Refresh preview
+function refreshPreview() {
+    const hours = parseInt(document.getElementById('hours-range').value);
+    const reportType = currentReportType;
+    
+    // Show loading
+    document.getElementById('preview-container').innerHTML = `
+        <div class="text-center py-5">
+            <div class="loading-spinner"></div>
+            <p class="mt-3 text-muted">Loading preview...</p>
+        </div>
+    `;
+    
+    // Fetch data for preview
+    Promise.all([
+        fetch('/api/alerts/stats').then(r => r.json()),
+        fetch('/api/alerts?limit=10').then(r => r.json()),
+        fetch('/api/system/stats').then(r => r.json()),
+        fetch('/api/connections/all').then(r => r.json())
+    ]).then(([statsRes, alertsRes, sysRes, connsRes]) => {
+        const alertStats = statsRes.success ? statsRes.data : {};
+        const alerts = alertsRes.success ? alertsRes.data : [];
+        const sysStats = sysRes.success ? sysRes.data : {};
+        const connections = connsRes.success ? connsRes.data : [];
+        
+        currentPreviewData = { alertStats, alerts, sysStats, connections, hours, reportType };
+        displayPreview(currentPreviewData);
+    }).catch(error => {
+        console.error('Preview error:', error);
+        document.getElementById('preview-container').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Failed to load preview: ${error.message}
+            </div>
+        `;
+    });
+}
+
+// Display preview
+function displayPreview(data) {
+    const { alertStats, alerts, sysStats, connections, hours, reportType } = data;
+    
+    if (reportType === 'quick') {
+        // Quick Summary Preview
+        const highCount = alertStats.by_severity?.HIGH || 0;
+        const totalAlerts = alertStats.total || 0;
+        
+        let html = `
+            <div class="preview-section">
+                <h6><i class="fas fa-chart-line me-2"></i> Quick Summary Preview</h6>
+                <div class="row">
+                    <div class="col-6">
+                        <div class="stat-badge">
+                            <div class="stat-number">${totalAlerts}</div>
+                            <div class="stat-label">Total Alerts</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-badge" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                            <div class="stat-number">${highCount}</div>
+                            <div class="stat-label">HIGH Severity</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <small class="text-muted">Period: Last ${hours} hours</small>
+                </div>
+            </div>
+            
+            <div class="preview-section">
+                <h6><i class="fas fa-microchip me-2"></i> System Status</h6>
+                <div class="row">
+                    <div class="col-4">
+                        <small class="text-muted">CPU</small>
+                        <div><strong>${sysStats.cpu?.percent || 0}%</strong></div>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted">Memory</small>
+                        <div><strong>${sysStats.memory?.percent || 0}%</strong></div>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted">Uptime</small>
+                        <div><strong>${sysStats.system?.uptime_days || 0}d</strong></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        if (alerts.length > 0) {
+            html += `
+                <div class="preview-section">
+                    <h6><i class="fas fa-bell me-2"></i> Recent Alerts</h6>
+                    ${alerts.slice(0, 3).map(alert => `
+                        <div class="preview-alert-item">
+                            <span class="badge bg-${alert.severity === 'HIGH' ? 'danger' : (alert.severity === 'MEDIUM' ? 'warning' : 'info')} me-2">${alert.severity}</span>
+                            <strong>${escapeHtml(alert.rule_name)}</strong>
+                            <div class="small text-muted mt-1">${escapeHtml((alert.details || '').substring(0, 100))}</div>
+                        </div>
+                    `).join('')}
+                    ${alerts.length > 3 ? `<div class="text-center mt-2"><small class="text-muted">+ ${alerts.length - 3} more alerts</small></div>` : ''}
+                </div>
+            `;
+        }
+        
+        document.getElementById('preview-container').innerHTML = html;
+        return;
+    }
+    
+    // Full Report Preview
+    const highCount = alertStats.by_severity?.HIGH || 0;
+    const mediumCount = alertStats.by_severity?.MEDIUM || 0;
+    const lowCount = alertStats.by_severity?.LOW || 0;
+    const totalAlerts = alertStats.total || 0;
+    
+    // Calculate risk levels for connections
+    const highRiskPorts = [4444, 1337, 31337];
+    const highRiskConns = connections.filter(c => highRiskPorts.includes(c.remote_port)).length;
+    
+    let html = `
+        <!-- Executive Summary -->
+        <div class="preview-section preview-stats">
+            <h6><i class="fas fa-chart-line me-2"></i> Executive Summary</h6>
+            <div class="row g-3 mb-3">
+                <div class="col-3">
+                    <div class="stat-badge">
+                        <div class="stat-number">${totalAlerts}</div>
+                        <div class="stat-label">Total Alerts</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="stat-badge" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                        <div class="stat-number">${highCount}</div>
+                        <div class="stat-label">HIGH</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="stat-badge" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);">
+                        <div class="stat-number">${mediumCount}</div>
+                        <div class="stat-label">MEDIUM</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="stat-badge" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">
+                        <div class="stat-number">${lowCount}</div>
+                        <div class="stat-label">LOW</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-6">
+                    <div class="stat-badge">
+                        <div class="stat-number">${connections.length}</div>
+                        <div class="stat-label">Active Connections</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="stat-badge" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                        <div class="stat-number">${highRiskConns}</div>
+                        <div class="stat-label">HIGH Risk Conns</div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3">
+                <small class="text-muted">Report period: Last ${hours} hours</small>
+            </div>
+        </div>
+        
+        <!-- System Statistics -->
+        <div class="preview-section">
+            <h6><i class="fas fa-microchip me-2"></i> System Statistics</h6>
+            <div class="row">
+                <div class="col-4">
+                    <small class="text-muted">CPU Usage</small>
+                    <div><strong>${sysStats.cpu?.percent || 0}%</strong></div>
+                </div>
+                <div class="col-4">
+                    <small class="text-muted">Memory Usage</small>
+                    <div><strong>${sysStats.memory?.percent || 0}%</strong></div>
+                </div>
+                <div class="col-4">
+                    <small class="text-muted">System Uptime</small>
+                    <div><strong>${sysStats.system?.uptime_days || 0} days</strong></div>
+                </div>
+            </div>
+            ${sysStats.memory ? `<div class="mt-2"><small class="text-muted">Memory: ${sysStats.memory.used_gb || 0}GB / ${sysStats.memory.total_gb || 0}GB</small></div>` : ''}
+            <div class="mt-1"><small class="text-muted">Boot Time: ${sysStats.system?.boot_time || 'Unknown'}</small></div>
+        </div>
+    `;
+    
+    // Security Alerts
+    if (document.getElementById('include-alerts').checked && alerts.length > 0) {
+        html += `
+            <div class="preview-section preview-alerts">
+                <h6><i class="fas fa-bell me-2"></i> Security Alerts</h6>
+                ${alerts.slice(0, 5).map(alert => `
+                    <div class="preview-alert-item">
+                        <span class="badge bg-${alert.severity === 'HIGH' ? 'danger' : (alert.severity === 'MEDIUM' ? 'warning' : 'info')} me-2">${alert.severity}</span>
+                        <strong>${escapeHtml(alert.rule_name)}</strong>
+                        <div class="small text-muted mt-1">${escapeHtml((alert.details || '').substring(0, 120))}</div>
+                    </div>
+                `).join('')}
+                ${alerts.length > 5 ? `<div class="text-center mt-2"><small class="text-muted">+ ${alerts.length - 5} more alerts</small></div>` : ''}
+            </div>
+        `;
+    }
+    
+    // Network Connections
+    if (document.getElementById('include-connections').checked && connections.length > 0) {
+        const highRiskConnsList = connections.filter(c => highRiskPorts.includes(c.remote_port));
+        
+        html += `
+            <div class="preview-section preview-connections">
+                <h6><i class="fas fa-network-wired me-2"></i> Network Connections</h6>
+                ${highRiskConnsList.length > 0 ? `
+                    <div class="alert alert-danger mb-2">
+                        <i class="fas fa-skull-crosswalk me-1"></i>
+                        <strong>${highRiskConnsList.length} HIGH Risk Connections Detected</strong>
+                    </div>
+                    ${highRiskConnsList.slice(0, 3).map(conn => `
+                        <div class="small mb-2">
+                            <i class="fas fa-skull-crosswalk text-danger"></i>
+                            <strong>${escapeHtml(conn.process || 'Unknown')}</strong> → ${conn.remote_ip}:${conn.remote_port}
+                        </div>
+                    `).join('')}
+                    ${highRiskConnsList.length > 3 ? `<div class="small text-muted">+ ${highRiskConnsList.length - 3} more</div>` : ''}
+                ` : '<div class="text-success"><i class="fas fa-check-circle"></i> No high risk connections detected</div>'}
+                <div class="mt-2 small text-muted">Total connections: ${connections.length}</div>
+            </div>
+        `;
+    }
+    
+    // Recommendations
+    if (document.getElementById('include-recommendations').checked) {
+        const recommendations = [];
+        if (highCount > 0) recommendations.push(`Investigate ${highCount} HIGH severity alerts immediately`);
+        if (highRiskConns > 0) recommendations.push(`Block ${highRiskConns} HIGH risk IP addresses at firewall`);
+        recommendations.push('Keep Windows and security tools updated');
+        recommendations.push('Review security logs regularly');
+        
+        html += `
+            <div class="preview-section preview-recommendations">
+                <h6><i class="fas fa-lightbulb me-2"></i> Recommendations</h6>
+                ${recommendations.map(rec => `<div class="small mb-1"><i class="fas fa-chevron-right text-muted me-1"></i> ${rec}</div>`).join('')}
+            </div>
+        `;
+    }
+    
+    // Footer
+    html += `
+        <div class="text-center text-muted small mt-3 pt-2 border-top">
+            <i class="fas fa-file-pdf me-1"></i> SIGMA Security Report | Generated: ${new Date().toLocaleString()}
+        </div>
+    `;
+    
+    document.getElementById('preview-container').innerHTML = html;
+}
+
+// Generate report
+function generateReport() {
+    const hours = parseInt(document.getElementById('hours-range').value);
+    const reportType = currentReportType;
+    
+    const btn = document.getElementById('generate-btn');
+    const statusDiv = document.getElementById('generate-status');
+    
+    btn.disabled = true;
+    statusDiv.style.display = 'block';
+    
+    const url = reportType === 'quick' ? '/api/report/quick' : '/api/report/generate';
+    
+    const payload = {
+        hours: hours,
+        include_alerts: document.getElementById('include-alerts').checked,
+        include_stats: document.getElementById('include-stats').checked,
+        include_connections: document.getElementById('include-connections').checked,
+        include_logs: document.getElementById('include-logs').checked,
+        include_recommendations: document.getElementById('include-recommendations').checked
+    };
+    
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.disabled = false;
+        statusDiv.style.display = 'none';
+        
+        if (data.success) {
+            alert('Report generated successfully! Download will start automatically.');
+            window.location.href = '/api/report/download/' + data.file;
+            setTimeout(loadRecentReports, 1000);
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        btn.disabled = false;
+        statusDiv.style.display = 'none';
+        alert('Failed to generate report: ' + error);
+    });
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Event listeners for section checkboxes
+document.getElementById('include-alerts').addEventListener('change', refreshPreview);
+document.getElementById('include-stats').addEventListener('change', refreshPreview);
+document.getElementById('include-connections').addEventListener('change', refreshPreview);
+document.getElementById('include-logs').addEventListener('change', refreshPreview);
+document.getElementById('include-recommendations').addEventListener('change', refreshPreview);
+document.getElementById('hours-range').addEventListener('change', refreshPreview);
+
+// Initial load
+document.addEventListener('DOMContentLoaded', () => {
+    selectReportType('full');
+    loadRecentReports();
+    refreshPreview();
+});
+</script>
+{% endblock %}
