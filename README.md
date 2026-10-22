@@ -1,10 +1,10 @@
-# SIGMA_project
+# SIGMA PROJECT   ![Status](https://img.shields.io/badge/completed-brightgreen)
 SIGMA is a python based security monitoring tool designed specifically for junior security operation center analyst (SOC) and security individual practitioners who what to understand:
 1. how can windows event logs be  prgrammatically collected, persed and structured to enable efficient security analysis and correlation.
 2. what detection rules are most effective for indentifying common attack vectors, including brute force attempts, suspicious process execution and potential vackdoor communicaions, using only locally available windows event data.
 3. how can external threat intelligence APIs, specifically VirusTotal and abuse IP data base be intergrated to automatically enrich detectors of compromise without introducing significant performance overhead or exeeding free tier limitation
 4. what web interface features and visualizations most effectively support security monitoring tasks for junior analysts, including real-time alert display, historical log searching and natural language query capabilties
-
+---
 This project provides benefits for multiple stakeholders:
 
 1. Junior SOC analysts: The system automates routine monitoring tasks, reduces time spent on false positive and provides enriched context for investigated events, allowing analyst to focus their expertise on complex threats requiring human judgment.
@@ -16,8 +16,7 @@ This project provides benefits for multiple stakeholders:
 4. Academic community: this work contributes documentation of practical approaches to windows security monitoring, including specific event ID correlations and detection rule implementations that can be adapted for further research.
 
 5. The researcher: the project provides hands on experience in full stack security tool development, log analysis, API integration and technical project management, enhancing practical skills valued in the cybersecurity industry.
-
-
+---
 The proposed system operates by continuously collecting and analyzing windows event logs from the security, system and application logs, while simultaneously monitoring running processes and active network connections on the host system. Unlike complex enterprise SIEM solutions that require extensive infrastructure, the system is designed as a lightweight, deployable application that provides immediate security visibility on individual windows workstations. The system employs a rule-based detection engine comprising nine core security rules targeting common attack vectors like: multiple failed login attempts (indicating of brute force attacks), suspicious process execution, unusual port connections (potential backdoors), privilege escalation events and unauthorized service installations. Each detection rule maps directly to specific windows event ID and behavioral patterns that junior analyst would typically investigate during routine monitoring duties.
 
 A key capacity of the system is its integration with external threat intelligence through the VirusTotal API, enabling the system to enrich detected indicators of compromise with global reputation data. When network connections are identified, the system automatically extracts remote IP addresses and queries VirusTotal’s database to determine whether those addresses have been associated with known malicious activity. This capability mirrors the investigative process a junior analyst would follow when triaging alerts, manually checking indicators against threat intelligence platforms to validate suspicious and prioritize responses. The integration demonstrates how even a rule-based system can leverage external intelligence sources to provide context that would otherwise require manual research.  
