@@ -1,4 +1,4 @@
-# SIGMA PROJECT   ![Status](https://img.shields.io/badge/completed-brightgreen)
+# SIGMA (Security Information Gathering & Monitoring System) PROJECT   ![Status](https://img.shields.io/badge/completed-brightgreen)
 SIGMA is a python based security monitoring tool designed specifically for junior security operation center analyst (SOC) and security individual practitioners who what to understand:
 1. how can windows event logs be  prgrammatically collected, persed and structured to enable efficient security analysis and correlation.
 2. what detection rules are most effective for indentifying common attack vectors, including brute force attempts, suspicious process execution and potential vackdoor communicaions, using only locally available windows event data.
