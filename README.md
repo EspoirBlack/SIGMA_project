@@ -1,4 +1,4 @@
-# SIGMA: Security Information Gathering and Monitoring System
+# SIGMA (Security Information Gathering and Monitoring System)
 
 ![Status](https://img.shields.io/badge/status-completed-brightgreen)
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
