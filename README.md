@@ -2,8 +2,8 @@
 
 ![Status](https://img.shields.io/badge/status-completed-brightgreen)
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
-![Flask](https://img.shields.io/badge/Framework-Flask-lightgrey)
-![Platform](https://img.shields.io/badge/Platform-Windows-blue)
+![Flask](https://img.shields.io/badge/Framework-Flask-orange)
+![Platform](https://img.shields.io/badge/Platform-Windows-purple)
 
 ## Overview
 
