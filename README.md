@@ -1,4 +1,4 @@
-# SIGMA (Security Information Gathering and Monitoring System)
+# SIGMA (Security Information Gathering & Monitoring System)
 
 ![Status](https://img.shields.io/badge/status-completed-brightgreen)
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
@@ -7,9 +7,9 @@
 
 ## Overview
 
-**SIGMA** is a lightweight, rule-based Security Information and Event Management (SIEM) tool designed specifically for Windows workstations. 
+**SIGMA** is a lightweight, rule-based Security Information and Event Management (SIEM) tool designed specifically for Windows workstations.
 
-I built this project entirely from scratch to address a major pain point in cybersecurity: **alert fatigue** and manual log correlation. Junior SOC analysts and small organizations often struggle with complex, expensive enterprise SIEMs or are forced to manually piece together raw Windows Event Logs. SIGMA solves this by providing a free, local, full-stack application that automatically collects logs, monitors system activity, detects threats, enriches data with threat intelligence, and serves it all on a real-time web dashboard.
+I built this project to address alert fatigue and manual log correlation. Junior SOC analysts and small organizations often struggle with complex, expensive enterprise SIEMs or are forced to manually piece together raw Windows Event Logs. SIGMA provides a free, local application that automatically collects logs, monitors system activity, detects threats, enriches data with threat intelligence, and displays it on a real-time web dashboard.
 
 ## The Problem I Solved
 
@@ -19,6 +19,16 @@ Junior analysts face three interconnected challenges:
 3. **Steep Learning Curve:** Extracting meaning from raw Windows Event IDs requires specialized knowledge.
 
 SIGMA bridges the gap between basic log viewers and massive enterprise SIEMs, providing automated visibility and context for a single host.
+
+## Project Goals and Stakeholders
+
+The project explores how to collect and structure Windows Event Logs, detect common attack patterns with locally available data, enrich indicators with threat intelligence, and present results in a useful web interface.
+
+It is intended to benefit:
+- **Junior SOC analysts:** Automates routine monitoring and adds context to alerts so analysts can focus on more complex investigations.
+- **Small and medium organizations:** Offers a lightweight security-monitoring option for organizations with limited budgets.
+- **Security students and educators:** Provides a practical reference for log collection, rule-based detection, threat intelligence, and dashboard development.
+- **Researchers:** Documents practical Windows security-monitoring approaches and provides hands-on experience with security tool development.
 
 ## Key Features
 
@@ -72,5 +82,6 @@ I designed the system using a modular architecture to keep the codebase clean an
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/sigma-security-monitor.git
-   cd sigma-security-monitor
+   git clone https://github.com/EspoirBlack/SIGMA_project.git
+   cd SIGMA_project
+   ```
