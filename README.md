@@ -108,9 +108,8 @@ I designed the system using a modular architecture to keep the codebase clean an
    open your browser and navigate to http://localhost:5000
    ```
 ### Testing the Detection Rules
-```
+
 you can sefly trigger the following rules on your local machine to test the system in a safe environment:
-```
 | Rule ID | Threat Detection | How to Trigger it |
 |:--- | :---: | :---: |
 | RULE_001 | 	Brute Force Login | Enter an incorrect password 3+ times at Windows login. |
