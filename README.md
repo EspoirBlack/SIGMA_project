@@ -85,3 +85,8 @@ I designed the system using a modular architecture to keep the codebase clean an
    git clone https://github.com/EspoirBlack/SIGMA_project.git
    cd SIGMA_project
    ```
+2. Create a virtual environment (Recommended):
+   ```
+   python -m venv venv
+   venv\Scripts\activate
+   ```
