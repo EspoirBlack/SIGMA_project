@@ -96,11 +96,13 @@ I designed the system using a modular architecture to keep the codebase clean an
    ```
 4. Configuration:
    ```
-   Open ```config.py``` and add your VirusTotal API key, email settings, and adjust detection thresholds.
+   Open config.py and add your VirusTotal API key, email settings, and adjust detection thresholds.
    ```
 5. Run the application:
-   ```Note: Must be run as Administrator```
-   ```python app.py```
+   ```
+   Note: Must be run as Administrator
+   python app.py
+   ```
 6. Access the Dashboard:
    ```
    open your browser and navigate to http://localhost:5000
@@ -108,14 +110,15 @@ I designed the system using a modular architecture to keep the codebase clean an
 ### Testing the Detection Rules
 ```
 you can sefly trigger the following rules on your local machine to test the system in a safe environment:
+```
 | Rule ID | Threat Detection | How to Trigger it |
----
+|:--- | :---: | :---: |
 | RULE_001 | 	Brute Force Login | Enter an incorrect password 3+ times at Windows login. |
 | RULE_002 | Suspicious Process | Open powershell.exe or cmd.exe. |
 | RULE_003 | Unusual Port | Run: Test-NetConnection -Port 4444 127.0.0.1 |
 | RULE_004 | Service Installation | sc create TestService binPath= "C:\Windows\system32\notepad.exe" |
 | RULE_005 | USB Insertion | Plug in a USB flash drive. |
-```
+
 ### Security & Ethical Considerations
 ```
 - Local Only: This tool is designed for local host monitoring and should not be exposed to the public internet. It currently lacks user authentication, as it is intended for a single-user local deployment.
