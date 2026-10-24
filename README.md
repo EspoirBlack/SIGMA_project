@@ -1,29 +1,76 @@
-# SIGMA_project
-SIGMA is a python based security monitoring tool designed specifically for junior security operation center analyst (SOC) and security individual practitioners who what to understand:
-1. how can windows event logs be  prgrammatically collected, persed and structured to enable efficient security analysis and correlation.
-2. what detection rules are most effective for indentifying common attack vectors, including brute force attempts, suspicious process execution and potential vackdoor communicaions, using only locally available windows event data.
-3. how can external threat intelligence APIs, specifically VirusTotal and abuse IP data base be intergrated to automatically enrich detectors of compromise without introducing significant performance overhead or exeeding free tier limitation
-4. what web interface features and visualizations most effectively support security monitoring tasks for junior analysts, including real-time alert display, historical log searching and natural language query capabilties
+# SIGMA: Security Information Gathering and Monitoring System
 
-This project provides benefits for multiple stakeholders:
+![Status](https://img.shields.io/badge/status-completed-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
+![Flask](https://img.shields.io/badge/Framework-Flask-lightgrey)
+![Platform](https://img.shields.io/badge/Platform-Windows-blue)
 
-1. Junior SOC analysts: The system automates routine monitoring tasks, reduces time spent on false positive and provides enriched context for investigated events, allowing analyst to focus their expertise on complex threats requiring human judgment.
+## Overview
 
-2. Small and medium organizations: this system provides a free, lightweight alternative to expensive commercial SIEM solutions, enabling organizations with limited cybersecurity budgets to implement structured security monitoring on their windows workstations.
+**SIGMA** is a lightweight, rule-based Security Information and Event Management (SIEM) tool designed specifically for Windows workstations. 
 
-3. Security students and educators: the project serves as a practical reference implementation demonstrating log collection techniques, rule-based detection, threat intelligence integrating and security dashboard development, supporting cybersecurity education.
+I built this project entirely from scratch to address a major pain point in cybersecurity: **alert fatigue** and manual log correlation. Junior SOC analysts and small organizations often struggle with complex, expensive enterprise SIEMs or are forced to manually piece together raw Windows Event Logs. SIGMA solves this by providing a free, local, full-stack application that automatically collects logs, monitors system activity, detects threats, enriches data with threat intelligence, and serves it all on a real-time web dashboard.
 
-4. Academic community: this work contributes documentation of practical approaches to windows security monitoring, including specific event ID correlations and detection rule implementations that can be adapted for further research.
+## The Problem I Solved
 
-5. The researcher: the project provides hands on experience in full stack security tool development, log analysis, API integration and technical project management, enhancing practical skills valued in the cybersecurity industry.
+Junior analysts face three interconnected challenges:
+1. **Alert Fatigue:** Overwhelmed by thousands of daily alerts, causing genuine threats to slip through.
+2. **Manual Correlation:** Investigative processes require switching between event logs, process lists, network connections, and external threat intel platforms.
+3. **Steep Learning Curve:** Extracting meaning from raw Windows Event IDs requires specialized knowledge.
 
+SIGMA bridges the gap between basic log viewers and massive enterprise SIEMs, providing automated visibility and context for a single host.
 
-The proposed system operates by continuously collecting and analyzing windows event logs from the security, system and application logs, while simultaneously monitoring running processes and active network connections on the host system. Unlike complex enterprise SIEM solutions that require extensive infrastructure, the system is designed as a lightweight, deployable application that provides immediate security visibility on individual windows workstations. The system employs a rule-based detection engine comprising nine core security rules targeting common attack vectors like: multiple failed login attempts (indicating of brute force attacks), suspicious process execution, unusual port connections (potential backdoors), privilege escalation events and unauthorized service installations. Each detection rule maps directly to specific windows event ID and behavioral patterns that junior analyst would typically investigate during routine monitoring duties.
+## Key Features
 
-A key capacity of the system is its integration with external threat intelligence through the VirusTotal API, enabling the system to enrich detected indicators of compromise with global reputation data. When network connections are identified, the system automatically extracts remote IP addresses and queries VirusTotal’s database to determine whether those addresses have been associated with known malicious activity. This capability mirrors the investigative process a junior analyst would follow when triaging alerts, manually checking indicators against threat intelligence platforms to validate suspicious and prioritize responses. The integration demonstrates how even a rule-based system can leverage external intelligence sources to provide context that would otherwise require manual research.  
+- **Automated Log Collection:** Continuously parses Security, System, and Application Windows Event Logs using `pywin32`.
+- **Real-time System Monitoring:** Tracks running processes, CPU/Memory usage, and active network connections via `psutil`.
+- **Custom Rule-Based Detection Engine:** Implements 9 core detection rules (e.g., Brute Force, Privilege Escalation, Service Installation) with a cooldown mechanism to prevent alert flooding.
+- **Threat Intelligence Integration:** Automatically extracts remote IP addresses and queries the **VirusTotal API** to check for malicious reputation, respecting free-tier rate limits and caching results.
+- **Real-Time Web Dashboard:** A Flask backend paired with WebSockets (Flask-SocketIO) for instant alert notifications without refreshing the page.
+- **Professional Reporting:** Generates downloadable PDF security reports (using ReportLab) with executive summaries and actionable recommendations.
+- **Persistent Storage:** Saves alerts in JSON format, ensuring historical analysis survives system reboots.
 
-The system provides an intuitive web-based interface developed using the Flask framework, allowing users to interact with the system through natural language queries such as “show failed logins” or “check suspicious processes”. This query functionality is implemented through keyword matching and log filtering rather than artificial intelligence, providing an accessible way for users to investigate security events without needing to understand complex query languages. The dashboard presents real-time system status, active alerts color-coded by severity and live log feeds, enabling continuous visibility into the security posture of the host. Users can generate comprehensive PDF reports containing executive summaries, system statistics, detailed alert listings and actionable recommendations supporting compliance requirements and incident documentation needs.
+## System Architecture & Modules
 
- All alerts and system events are persistently stored in JSON format, ensuring data survives application restarts and can be reviewed historically. The application includes comprehensive error handling and logging capabilities, with clear user guidance when administrative privileges are required for log access. The system is built entirely using python and open-source libraries, demonstrating that effective security monitoring capabilities can be developed and deployed without reliance on expensive commercial solutions or complex artificial intelligence systems.
+I designed the system using a modular architecture to keep the codebase clean and scalable:
 
- This Security Information Gathering and Monitoring System successfully demonstrate how automated log collection, rule-based detection and threat intelligence integration can reduce the workload on junior SOC analysts by handling routine monitoring tasks, correlating events across multiple data sources and providing enriched context for security decisions. The system achieves its objectives through practical implementation of windows log collection, real-time system monitoring, rule-based detection, external threat intelligence integration and professional reporting capabilities.
+1. **Log Collector (`log_collector.py`):** Reads and parses Windows event logs.
+2. **System Monitor (`system_monitor.py`):** Retrieves process lists and network connections.
+3. **Rule Engine (`rule_engine.py`):** Analyzes data against security rules and handles alert cooldowns.
+4. **Alert Manager (`alert_manager.py`):** Manages alert state and persists them to `alerts.json`.
+5. **Threat Intel (`virus_total.py`):** Handles API requests and caching for VirusTotal IP lookups.
+6. **Report Generator (`report_generator.py`):** Creates PDF incident/compliance reports.
+7. **Web Interface (`routes.py` & `templates/`):** Flask backend serving the Bootstrap-based dashboard UI.
+
+## Screenshots & Demonstration
+
+**Real-time Dashboard**
+![Dashboard](screenshots/dashboard.png)
+
+**Alert Management & VirusTotal Enrichment**
+![Alerts](screenshots/alerts.png)
+
+**System Architecture (Level 1 Data Flow Diagram)**
+![DFD](screenshots/dfd.png)
+
+## Tech Stack
+
+- **Backend:** Python 3.9+, Flask, Flask-SocketIO
+- **Windows Integration:** `pywin32`, `psutil`
+- **Frontend:** HTML5, CSS3, Bootstrap 5, JavaScript (jQuery)
+- **Reporting:** ReportLab
+- **APIs:** VirusTotal API v3
+
+## Installation & Setup
+
+### Prerequisites
+- Windows 10 or Windows 11
+- Python 3.9 or higher
+- Administrator privileges (required to read Security Event Logs)
+
+### Step-by-Step Guide
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/sigma-security-monitor.git
+   cd sigma-security-monitor
